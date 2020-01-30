@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".ContactsActivity"
+    android:background="#54ACF1"
+    >
+
+    <FrameLayout
+        android:id="@+id/toolbar_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+    <include layout="@layout/toolbar"
+        android:id="@+id/contacts_activity_toolbar"/>
+        <com.miguelcatalan.materialsearchview.MaterialSearchView
+            android:id="@+id/Matirial_main_search_view"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+    </FrameLayout>
+
+    <FrameLayout
+        android:id="@+id/fragmentContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@+id/toolbar_container"
+        android:layout_marginTop="5dp">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:layout_width="match_parent"
+            android:id="@+id/recyclerchat"
+            android:visibility="visible"
+            android:layout_height="match_parent"
+            android:background="#FFEB3B"
+            >
+
+
+        </androidx.recyclerview.widget.RecyclerView>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:layout_width="match_parent"
+            android:id="@+id/searchrecylerview"
+            android:visibility="gone"
+            android:layout_height="match_parent"
+            android:background="#009688"
+            >
+        </androidx.recyclerview.widget.RecyclerView>
+
+        <ProgressBar
+            android:id="@+id/search_chatusers_bar"
+            android:indeterminateTint="#FFF"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+
+            />
+
+        <TextView
+            android:id="@+id/datafromdbstatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="NO Data Found!"
+            android:textAlignment="center"
+            android:textColor="#000"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:visibility="gone"
+            />
+
+    </FrameLayout>
+
+</RelativeLayout>

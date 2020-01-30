@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:fresco="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".CurrentUserActivity"
+    android:background="#5C95C9"
+    >
+
+    <include layout="@layout/toolbar"
+        android:id="@+id/currentuser_activity_toolbar"/>
+
+    <androidx.appcompat.widget.AppCompatImageView
+        android:id="@+id/setting_profilepic"
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:layout_below="@+id/currentuser_activity_toolbar"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentEnd="true"
+        android:layout_marginStart="0dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginEnd="0dp"
+        android:src="@drawable/ic_male" />
+
+    <TextView
+        android:id="@+id/current_user_fullname"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/setting_profilepic"
+        android:layout_marginTop="20dp"
+        android:textSize="24sp"
+        android:text="Full Name"
+        android:textAlignment="center"
+        android:textColor="#000000"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/current_user_username"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/current_user_fullname"
+        android:layout_marginTop="20dp"
+        android:text="Username"
+        android:textAlignment="center"
+        android:textColor="#000000"
+        android:textSize="20sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/current_user_email"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/current_user_username"
+        android:layout_marginTop="20dp"
+        android:text="Email"
+        android:textAlignment="center"
+        android:textColor="#000000"
+        android:textSize="20sp"
+        android:textStyle="bold" />
+
+
+
+
+</RelativeLayout>

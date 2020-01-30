@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    >
+
+
+    <de.hdodenhof.circleimageview.CircleImageView
+        android:id="@+id/Othersprofile_image"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
+        android:layout_marginStart="1dp"
+        android:layout_marginTop="5dp"
+        android:layout_marginEnd="0dp"
+        android:src="@drawable/ic_male"
+        app:civ_border_color="#FF000000"
+        app:civ_border_width="2dp" />
+
+    <LinearLayout
+        android:id="@+id/othermessageLLinear"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_marginStart="0dp"
+        android:layout_marginTop="0dp"
+        android:layout_toEndOf="@+id/Othersprofile_image"
+        android:orientation="vertical"
+        android:padding="5dp">
+
+        <TextView
+            android:id="@+id/Othernickname"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="0"
+            android:textAppearance="?android:attr/textAppearanceSmall"
+            tools:text="Name" />
+
+        <TextView
+            android:id="@+id/Othersmessage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="0"
+
+            android:background="@drawable/other_msg"
+            android:padding="10dp"
+            android:textAppearance="?android:attr/textAppearanceLarge"
+            android:textColor="@android:color/white"
+            android:textSize="18sp"
+            tools:text="Message" />
+
+        <TextView
+            android:id="@+id/Othertimestamp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="13dp"
+            android:text="timestamp"
+            android:textSize="10dp"
+
+            >
+
+        </TextView>
+
+    </LinearLayout>
+
+
+</RelativeLayout>

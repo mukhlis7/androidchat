@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    android:id="@+id/user_Search_layout"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+
+    >
+
+    <de.hdodenhof.circleimageview.CircleImageView
+        android:id="@+id/searchlist_image"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:layout_margin="8dp"
+        android:src="@drawable/ic_male"
+        />
+
+    <TextView
+        android:id="@+id/searchlist_fullname"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignTop="@+id/searchlist_image"
+        android:layout_marginStart="10dp"
+        android:layout_marginTop="0dp"
+        android:layout_toEndOf="@+id/searchlist_image"
+        android:text="Full Name"
+        android:textSize="16sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/searchlist_username"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/searchlist_fullname"
+        android:layout_marginStart="10dp"
+        android:layout_marginTop="2dp"
+        android:layout_toEndOf="@+id/searchlist_image"
+        android:text="Username"
+
+        android:textSize="14sp" />
+
+
+</RelativeLayout>

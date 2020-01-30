@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".LoginActivity">
+
+
+    <include layout="@layout/toolbar"
+        android:id="@+id/signup_activity_toolbar"/>
+
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/signup_activity_toolbar"
+        android:layout_marginTop="5dp">
+
+        <LinearLayout
+            android:id="@+id/signup_layout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="20dp"
+            android:orientation="vertical">
+
+
+            <de.hdodenhof.circleimageview.CircleImageView
+                android:id="@+id/setting_profile_pic"
+                android:layout_width="150dp"
+                android:layout_height="150dp"
+
+                android:layout_gravity="center_horizontal"
+                app:civ_border_width="2dp"
+                android:src="@drawable/ic_male"
+                app:civ_border_color="#FF000000"
+                />
+
+
+            <EditText
+                android:id="@+id/signupfullname"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Enter Your Full Name"
+                android:inputType="textPersonName"
+                android:maxLength="30">
+
+            </EditText>
+
+            <EditText
+
+                android:id="@+id/signupusername"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:hint="Enter Username"
+                android:inputType="text"
+                android:maxLength="30">
+
+            </EditText>
+
+            <EditText
+                android:id="@+id/e_mail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:hint="Enter Your Personal E-mail"
+                android:inputType="textEmailAddress"
+                android:maxLength="40">
+
+            </EditText>
+
+            <EditText
+                android:id="@+id/password1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:hint="Type A Password"
+                android:inputType="textPassword"
+                android:maxLength="30">
+
+            </EditText>
+
+            <EditText
+                android:id="@+id/repassword1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:hint="Re-Type A Password"
+                android:inputType="textPassword"
+                android:maxLength="30">
+
+            </EditText>
+
+            <Button
+                android:id="@+id/btnsignup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="Signup"
+                android:textSize="20sp"
+                android:textStyle="bold">
+
+            </Button>
+
+            <Button
+                android:id="@+id/btnloginhere"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="Login Here"
+                android:textSize="20sp"
+                android:textStyle="bold">
+
+            </Button>
+
+        </LinearLayout>
+
+    </ScrollView>
+
+</RelativeLayout>
