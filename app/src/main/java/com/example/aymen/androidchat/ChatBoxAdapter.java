@@ -62,10 +62,13 @@ public class ChatBoxAdapter  extends ArrayAdapter<Message> {
 
             convertView = ((Activity) getContext()).getLayoutInflater().inflate(R.layout.item_my_msg, parent, false);
             TextView messageText = convertView.findViewById(R.id.my_message_body);
+
             TextView mytimeText = convertView.findViewById(R.id.mytimestamp);
 
             messageText.setText(message.getMessage());
+
             long unixTime = message.getTimestamp();
+
             String inshort = GetTimeFromStamp.getTimeAgo(unixTime,getContext());
 
             mytimeText.setText(inshort);
