@@ -27,18 +27,17 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_below="@+id/toolbar_container"
-        android:layout_marginTop="5dp">
+        >
 
-        <androidx.recyclerview.widget.RecyclerView
+        <ListView
             android:layout_width="match_parent"
-            android:id="@+id/recyclerchat"
+            android:id="@+id/Contacts_ListView"
             android:visibility="visible"
             android:layout_height="match_parent"
-            android:background="#FFEB3B"
             >
 
 
-        </androidx.recyclerview.widget.RecyclerView>
+        </ListView>
 
         <androidx.recyclerview.widget.RecyclerView
             android:layout_width="match_parent"

@@ -8,13 +8,13 @@
 
 
     <de.hdodenhof.circleimageview.CircleImageView
-        android:id="@+id/Othersprofile_image"
+        android:id="@+id/Others_MSG_profile_image"
         android:layout_width="40dp"
         android:layout_height="40dp"
         android:layout_alignParentStart="true"
         android:layout_alignParentTop="true"
-        android:layout_marginStart="1dp"
-        android:layout_marginTop="5dp"
+        android:layout_marginStart="5dp"
+        android:layout_marginTop="2dp"
         android:layout_marginEnd="0dp"
         android:src="@drawable/ic_male"
         app:civ_border_color="#FF000000"
@@ -27,12 +27,12 @@
         android:layout_alignParentTop="true"
         android:layout_marginStart="0dp"
         android:layout_marginTop="0dp"
-        android:layout_toEndOf="@+id/Othersprofile_image"
+        android:layout_toEndOf="@+id/Others_MSG_profile_image"
         android:orientation="vertical"
         android:padding="5dp">
 
         <TextView
-            android:id="@+id/Othernickname"
+            android:id="@+id/Otherusername"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
@@ -40,19 +40,43 @@
             android:textAppearance="?android:attr/textAppearanceSmall"
             tools:text="Name" />
 
-        <TextView
-            android:id="@+id/Othersmessage"
+
+        <FrameLayout
+            android:id="@+id/msg_image_view_frame"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="10dp"
-            android:layout_weight="0"
-
             android:background="@drawable/other_msg"
-            android:padding="10dp"
-            android:textAppearance="?android:attr/textAppearanceLarge"
-            android:textColor="@android:color/white"
-            android:textSize="18sp"
-            tools:text="Message" />
+
+            >
+
+
+            <TextView
+                android:id="@+id/Othersmessage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="5dp"
+                android:layout_marginTop="1dp"
+                android:layout_weight="0"
+
+                android:padding="10dp"
+                android:textAppearance="?android:attr/textAppearanceLarge"
+                android:textColor="@android:color/white"
+                android:textSize="18sp"
+                tools:text="Message" />
+
+            <ImageView
+                android:id="@+id/other_msg_image_view"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="5dp"
+                android:layout_weight="0"
+                android:padding="5dp"
+
+                />
+
+
+        </FrameLayout>
+
 
         <TextView
             android:id="@+id/Othertimestamp"

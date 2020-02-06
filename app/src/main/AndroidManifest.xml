@@ -16,8 +16,9 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
+        tools:ignore="GoogleAppIndexingWarning"
         android:theme="@style/AppTheme"
-        tools:ignore="GoogleAppIndexingWarning">
+        >
         <activity android:name=".FullScreenImage"
             android:theme="@style/Theme.AppCompat.DayNight.NoActionBar">
 

@@ -4,18 +4,18 @@ import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
-import androidx.recyclerview.widget.DefaultItemAnimator;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 
 import android.annotation.SuppressLint;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.DialogInterface;
-import android.content.Entity;
 import android.content.Intent;
-import android.content.SharedPreferences;
+import android.database.Cursor;
+import android.database.DatabaseUtils;
 import android.graphics.Bitmap;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 
 import android.os.Handler;
@@ -26,6 +26,8 @@ import android.util.Base64;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
@@ -39,7 +41,6 @@ import com.github.nkzawa.emitter.Emitter;
 import com.github.nkzawa.socketio.client.IO;
 import com.github.nkzawa.socketio.client.Socket;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
-import com.google.gson.Gson;
 import com.squareup.picasso.Picasso;
 import com.theartofdev.edmodo.cropper.CropImage;
 import com.theartofdev.edmodo.cropper.CropImageView;
@@ -52,44 +53,43 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
 
 import de.hdodenhof.circleimageview.CircleImageView;
 import id.zelory.compressor.Compressor;
+import needle.Needle;
+import needle.UiRelatedTask;
 
+import static com.example.aymen.androidchat.ChatBoxDBHelper.ChatBox_ID;
+import static com.example.aymen.androidchat.ChatBoxDBHelper.ChatBox_Message;
+import static com.example.aymen.androidchat.ChatBoxDBHelper.ChatBox_MsgType;
+import static com.example.aymen.androidchat.ChatBoxDBHelper.ChatBox_UnixTimeStamp;
+import static com.example.aymen.androidchat.ChatBoxDBHelper.ChatBox_WHICH;
+import static com.example.aymen.androidchat.ChatBoxDBHelper.Loggedin_User_Contact_ChatTable;
 import static com.example.aymen.androidchat.ChatBoxDBHelper.Loggedin_User_Email;
 import static com.example.aymen.androidchat.ChatBoxDBHelper.Loggedin_User_Fullname;
+import static com.example.aymen.androidchat.ChatBoxDBHelper.Loggedin_User_Profile_pic_url;
 import static com.example.aymen.androidchat.ChatBoxDBHelper.Loggedin_User_Thumb_pic_url;
 import static com.example.aymen.androidchat.ChatBoxDBHelper.Loggedin_User_Token;
 import static com.example.aymen.androidchat.ChatBoxDBHelper.Loggedin_User_Username;
-import static com.example.aymen.androidchat.LoginActivity.SH_Email;
-import static com.example.aymen.androidchat.LoginActivity.SH_Fullname;
-import static com.example.aymen.androidchat.LoginActivity.SH_Loggedin_Data;
-import static com.example.aymen.androidchat.LoginActivity.SH_Thumb_Profile_pic;
-import static com.example.aymen.androidchat.LoginActivity.SH_UniqueId;
-import static com.example.aymen.androidchat.LoginActivity.SH_Username;
 
 public class ChatBoxActivity extends AppCompatActivity {
     public ListView myListView ;
     public static String uniqueId;
-    public static String TouniqueId;
+    public static String Recipient_UniqueId;
     public static String fullname;
-    public static String Tofullname;
+    public static String Recipient_Fullname;
     public static String email;
-    public static String Toemail;
+    public static String Recipient_Email;
     public static String profile_thumb_pic;
-    public static String Toprofile_thumb_pic;
-    public List<Message> MessageList ;
+    public static String Recipient_profile_thumb_pic;
+    public ListView messageslist ;
     public ChatBoxAdapter chatBoxAdapter;
     public static String Userconnected;
     public static boolean isnewUserconnected = false;
     public  EditText messagetxt ;
-    public  Button send ;
+    public  ImageButton send ;
     public ImageButton additems ;
     private Toolbar toolbar;
     private Thread thread2;
@@ -104,13 +104,25 @@ public class ChatBoxActivity extends AppCompatActivity {
     private CircleImageView toolbar_image;
     private BottomSheetDialog bottomSheetDialog;
     private ChatBoxDBHelper chatBoxDBHelper;
-
+    private static final int PICK_IMAGE_REQUEST = 1001;
     public static String Nickname;
-    public static String ToNickname;
+    public static String profile_pic;
+    public String Recipient_Username;
+    public  String Recipient_UserChatTable;
     private static final String SIOURL = "http://rt-chat07.herokuapp.com/";
     //private static final String SIOURL = "http://rt-chat07.herokuapp.com/";
    // private static final String SIOURL = "http://192.168.43.38/";
+    //private static final String SIOURL = "http://192.168.12.1/";
+    private ArrayList<Message> mArrayList;
+    private String imageString;
+    private String thumb_imageString;
 
+    private Uri imgresultUri;
+    String imgPath, fileName;
+
+
+    Bitmap bitmap;
+    Bitmap thumb_bitmap;
 
 
     @SuppressLint("HandlerLeak")
@@ -120,18 +132,24 @@ public class ChatBoxActivity extends AppCompatActivity {
             super.handleMessage(msg);
             //Log.i(TAG, "handleMessage: typing stopped " + startTyping);
             if(time == 0){
-                toolbar_subtitle.setText(ToNickname);
+                toolbar_subtitle.setText(Recipient_Username);
                 //Log.i(TAG, "handleMessage: typing stopped time is " + time);
                 startTyping = false;
                 time = 2;
 
-                try {
-                    wait(4000);
-                    //Log.i(TAG, "run: typing " + time);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+                synchronized (handler2) {
+
+
+                    try {
+                        wait(2000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
                 }
-                handler3.sendEmptyMessage(0);
+                    //Log.i(TAG, "run: typing " + time);
+
+                //handler3.sendEmptyMessage(0);
 
             }
 
@@ -167,8 +185,12 @@ public class ChatBoxActivity extends AppCompatActivity {
         //GetUsernameAlertDialog();
 
         messagetxt = (EditText) findViewById(R.id.message) ;
-        send = (Button)findViewById(R.id.send);
+        send = (ImageButton)findViewById(R.id.send);
         additems = (ImageButton)findViewById(R.id.btn_add);
+
+        messageslist = findViewById(R.id.messageslistView);
+
+
         if (messagetxt.getText().toString().trim().length() > 0) {
             send.setEnabled(true);
         } else {
@@ -179,38 +201,51 @@ public class ChatBoxActivity extends AppCompatActivity {
         // get the nickame of the user
         Intent intent = getIntent();
         //String id = intent.getStringExtra("id");
-        ToNickname = intent.getStringExtra("username");
-        TouniqueId = intent.getStringExtra("public_id");
-        Tofullname = intent.getStringExtra("fullname");
-        Toemail = intent.getStringExtra("email");
-        Toprofile_thumb_pic = intent.getStringExtra("profile_thumb_pic");
+        Recipient_Username = intent.getStringExtra("username");
+        Recipient_UniqueId = intent.getStringExtra("public_id");
+        Recipient_Fullname = intent.getStringExtra("fullname");
+        Recipient_Email = intent.getStringExtra("email");
+        Recipient_UserChatTable = intent.getStringExtra("UserChatTable");
+        Recipient_profile_thumb_pic = intent.getStringExtra("profile_thumb_pic");
+        final String Recipient_profile_pic = intent.getStringExtra("profile_pic");
         //Nickname= (String) Objects.requireNonNull(getIntent().getExtras()).getString("username");
 
         chatBoxDBHelper = new ChatBoxDBHelper(getApplicationContext());
 
         chatBoxDBHelper.open();
 
-        JSONArray jsonArray = chatBoxDBHelper.getLoggedinUserDetails();
+        String UserChatTable = chatBoxDBHelper.addDataToChatContacts_Table(Recipient_Fullname,Recipient_Username,Recipient_Email,Recipient_UniqueId,Recipient_profile_thumb_pic,Recipient_profile_pic);
 
-        try {
-            String logindata = jsonArray.getString(0);
+        Log.i("Chat bOx ACtivity","Contact Data Added to ChatContacts_Table");
 
-            JSONObject jsonObject = new JSONObject(logindata);
 
-            Nickname = jsonObject.getString(Loggedin_User_Username);
-            uniqueId = jsonObject.getString(Loggedin_User_Token);
-            profile_thumb_pic = jsonObject.getString(Loggedin_User_Thumb_pic_url);
-            fullname = jsonObject.getString(Loggedin_User_Fullname);
-            email = jsonObject.getString(Loggedin_User_Email);
+        if (Recipient_UserChatTable == null) {
+            Recipient_UserChatTable = UserChatTable;
+        }
 
-            ;
+        Cursor cu = chatBoxDBHelper.getLoggedinUserDetails();
+
+
+        if (cu.moveToFirst()){
+            do{
+                Nickname = cu.getString(cu.getColumnIndexOrThrow(Loggedin_User_Username));
+                uniqueId = cu.getString(cu.getColumnIndexOrThrow(Loggedin_User_Token));
+                profile_thumb_pic = cu.getString(cu.getColumnIndexOrThrow(Loggedin_User_Thumb_pic_url));
+                profile_pic = cu.getString(cu.getColumnIndexOrThrow(Loggedin_User_Profile_pic_url));
+                fullname = cu.getString(cu.getColumnIndexOrThrow(Loggedin_User_Fullname));
+                email = cu.getString(cu.getColumnIndexOrThrow(Loggedin_User_Email));
+
+            }while(cu.moveToNext());
+        }
+        cu.close();
+        chatBoxDBHelper.close();
+
+
 
             // thumburl = jsonObject.getString("_Thumb_pic_URL");
 
             //current_user_fullname.setText(jsonArray.getString(1));
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
+
 
         //SharedPreferences prefs = getSharedPreferences(SH_Loggedin_Data, MODE_PRIVATE);
 
@@ -220,6 +255,8 @@ public class ChatBoxActivity extends AppCompatActivity {
         ActionBar actionBar = getSupportActionBar();
         assert actionBar != null;
         actionBar.setDisplayHomeAsUpEnabled(true);
+
+
 
         actionBar.setDisplayShowCustomEnabled(true);
 
@@ -233,28 +270,97 @@ public class ChatBoxActivity extends AppCompatActivity {
         toolbar_subtitle = findViewById(R.id.chatbox_custom_subTitle);
         toolbar_image = findViewById(R.id.chatbox_custom_image);
 
-        toolbar_title.setText(Tofullname);
-        toolbar_subtitle.setText(ToNickname);
-        Picasso.get().load(Toprofile_thumb_pic).placeholder(R.drawable.ic_male).into(toolbar_image);
+        toolbar_title.setText(Recipient_Fullname);
+        toolbar_subtitle.setText(Recipient_Username);
+        Picasso.get().load(Recipient_profile_thumb_pic).placeholder(R.drawable.ic_male).into(toolbar_image);
+
+
+        toolbar.setNavigationOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                finish();
+            }
+        });
 
 
         onTypeButtonEnable();
 
-        toolbar.setTitle("HElll");
+        mArrayList = new ArrayList<Message>();
+        //toolbar.setTitle("HElll");
 
-        messagetxt.setOnFocusChangeListener(new View.OnFocusChangeListener() {
+
+
+        Needle.onBackgroundThread().execute(new UiRelatedTask<Integer>() {
             @Override
-            public void onFocusChange(View v, boolean hasFocus) {
+            protected Integer doWork() {
 
+                chatBoxDBHelper.open();
+                if (Recipient_UserChatTable!=null) {
+
+                    Cursor chatDetailsoncreate = chatBoxDBHelper.getUserChatHistory(Recipient_UserChatTable);
+
+                    if(chatDetailsoncreate != null && chatDetailsoncreate.getCount() > 0) {
+                        mArrayList.clear();
+                        for (chatDetailsoncreate.moveToFirst(); !chatDetailsoncreate.isAfterLast(); chatDetailsoncreate.moveToNext()) {
+                            // The Cursor is now set to the right position
+                            Message testModel = new Message(
+                                    Nickname,
+                                    Recipient_Username,
+                                    chatDetailsoncreate.getString(chatDetailsoncreate.getColumnIndexOrThrow(ChatBox_Message)),
+                                    profile_thumb_pic,
+                                    Recipient_profile_thumb_pic,
+                                    chatDetailsoncreate.getString(chatDetailsoncreate.getColumnIndexOrThrow(ChatBox_MsgType)),
+                                    chatDetailsoncreate.getLong(chatDetailsoncreate.getColumnIndexOrThrow(ChatBox_UnixTimeStamp)),
+                                    chatDetailsoncreate.getInt(chatDetailsoncreate.getColumnIndexOrThrow(ChatBox_ID)),
+                                    chatDetailsoncreate.getInt(chatDetailsoncreate.getColumnIndexOrThrow(ChatBox_WHICH))
+
+
+                            );
+                            mArrayList.add(testModel);
+                        }
+                        chatDetailsoncreate.close();
+
+                    }
+                    Log.i("user Chat History : ", mArrayList.toString());
+                }
+
+                int result = 1+2;
+                return result;
+            }
+
+            @Override
+            protected void thenDoUiRelatedWork(Integer result) {
+                //mSomeTextView.setText("result: " + result);
+
+                chatBoxAdapter = new ChatBoxAdapter(ChatBoxActivity.this,R.id.my_msg_item_layout, mArrayList);
+
+                // Attach cursor adapter to the ListView
+                messageslist.setAdapter(chatBoxAdapter);
+                messageslist.setSelection(chatBoxAdapter.getCount() - 1);
+                chatBoxDBHelper.close();
+
+            }
+        });
+
+
+        messagetxt.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
 
                 boolean typing = true;
                 //String username = Nickname;
                 //String uniqueId = uniqueId;
                 String data = "{\n"+
                         "   \"typing\": \"" + typing + "\",\n" +
-                        "   \"fromuser\": \"" + Nickname + "\",\n" +
-                        "   \"touser\": \"" + ToNickname + "\",\n" +
-                        "   \"fromuser_uniqueId\": \"" + uniqueId + "\"\n" +
+                        "   \"sender\": \"" + Nickname + "\",\n" +
+                        "   \"recipient\": \"" + Recipient_Username + "\",\n" +
+                        "   \"sender_uniqueId\": \"" + uniqueId + "\"\n" +
                         "}";
 
 
@@ -268,6 +374,12 @@ public class ChatBoxActivity extends AppCompatActivity {
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
+
+
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
 
             }
         });
@@ -287,16 +399,135 @@ public class ChatBoxActivity extends AppCompatActivity {
             e.printStackTrace();
 
         }
-        //setting up listview
-        MessageList = new ArrayList<>();
-
-        myListView =  findViewById(R.id.messagelist);
-
-        chatBoxAdapter = new ChatBoxAdapter(this, R.layout.item, MessageList);
-
-        myListView.setAdapter(chatBoxAdapter);
 
 
+        messageslist.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(AdapterView<?> parent, View view, final int position, long id) {
+
+
+                AlertDialog.Builder builderSingle = new AlertDialog.Builder(ChatBoxActivity.this);
+               // builderSingle.setIcon(R.drawable.ic_launcher);
+                builderSingle.setTitle("Select Option:-");
+
+                final ArrayAdapter<String> arrayAdapter = new ArrayAdapter<String>(ChatBoxActivity.this, R.layout.chatbox_dialog_options);
+                arrayAdapter.add("Delete Message");
+                arrayAdapter.add("Copy Message");
+                arrayAdapter.add("ReSend Message");
+               // arrayAdapter.add("Umang");
+                //arrayAdapter.add("Gatti");
+
+                builderSingle.setNegativeButton("cancel", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.dismiss();
+                    }
+                });
+
+                builderSingle.setAdapter(arrayAdapter, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        String strName = arrayAdapter.getItem(which);
+                        if (strName.equals("Delete Message")){
+
+                            AlertDialog.Builder builderInner = new AlertDialog.Builder(ChatBoxActivity.this);
+                            builderInner.setMessage(strName);
+                            builderInner.setTitle("Your Selected Item is");
+                            builderInner.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog,int which) {
+
+                                    Message msg = mArrayList.get(position);
+
+                                    int trg_msg_id = msg.getID();
+
+                                    chatBoxDBHelper.open();
+                                    chatBoxDBHelper.deleteMessagefromdb(trg_msg_id,Recipient_UserChatTable);
+
+
+                                    new Handler().post(new Runnable() {
+                                        @Override
+                                        public void run() {
+
+                                            Cursor chatDetails;
+
+                                            if (Recipient_UserChatTable!=null) {
+                                                chatDetails = chatBoxDBHelper.getUserChatHistory(Recipient_UserChatTable);
+                                                mArrayList.clear();
+
+                                                for(chatDetails.moveToFirst(); !chatDetails.isAfterLast(); chatDetails.moveToNext()) {
+                                                    // The Cursor is now set to the right position
+                                                    Message testModel = new Message(
+                                                            Nickname,
+                                                            Recipient_Username,
+                                                            chatDetails.getString(chatDetails.getColumnIndexOrThrow(ChatBox_Message)),
+                                                            profile_thumb_pic,
+                                                            Recipient_profile_thumb_pic,
+                                                            chatDetails.getString(chatDetails.getColumnIndexOrThrow(ChatBox_MsgType)),
+                                                            chatDetails.getLong(chatDetails.getColumnIndexOrThrow(ChatBox_UnixTimeStamp)),
+                                                            chatDetails.getInt(chatDetails.getColumnIndexOrThrow(ChatBox_ID)),
+                                                            chatDetails.getInt(chatDetails.getColumnIndexOrThrow(ChatBox_WHICH))
+
+
+                                                    );
+                                                    mArrayList.add(testModel);
+                                                }
+
+                                                Log.i("user Chat History : ", mArrayList.toString());
+
+
+                                                //Log.i("Cursor is not EMp:",chatDetails.toString());
+
+                                                chatBoxAdapter = new ChatBoxAdapter(ChatBoxActivity.this,R.id.my_msg_item_layout, mArrayList);
+
+                                                // Attach cursor adapter to the ListView
+                                                messageslist.setAdapter(chatBoxAdapter);
+                                                messageslist.setSelection(chatBoxAdapter.getCount() - 1);
+
+
+                                            }
+
+                                        }
+
+
+                                    });
+
+                                    chatBoxDBHelper.close();
+
+
+
+
+                                }
+                            });
+
+                            builderInner.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    dialog.dismiss();
+                                }
+                            });
+                            builderInner.show();
+                        }else if (strName.equals("Copy Message")){
+
+
+                            Message msg = mArrayList.get(position);
+
+                            String trg_msg = msg.getMessage();
+
+
+                            setClipboard(getApplicationContext(),trg_msg);
+
+                            Toast.makeText(getApplicationContext(),"Copied To Clipboard",Toast.LENGTH_LONG).show();
+
+                        }
+
+                    }
+                });
+                builderSingle.show();
+
+                return true;
+            }
+        });
 
         // message send action
         send.setOnClickListener(new View.OnClickListener() {
@@ -305,13 +536,29 @@ public class ChatBoxActivity extends AppCompatActivity {
                 //retrieve the nickname and the message content and fire the event messagedetection
                 if(!messagetxt.getText().toString().trim().isEmpty()){
 
-                    String msg = messagetxt.getText().toString();
+                    final String msg = messagetxt.getText().toString();
+
+                    boolean fistchat = false;
+
+                    final Cursor chatDetails = chatBoxDBHelper.getUserChatHistory(Recipient_UserChatTable);
+
+                    if (chatDetails.getCount() == 0){
+
+                        fistchat = true;
+
+
+                    }
+
 
                     String data = "{\n"+
                             "   \"msg\": \"" + msg + "\",\n" +
-                            "   \"fromuser\": \"" + Nickname + "\",\n" +
-                            "   \"touser\": \"" + ToNickname + "\",\n" +
-                            "   \"fromuser_uniqueId\": \"" + uniqueId + "\"\n" +
+                            "   \"sender\": \"" + Nickname + "\",\n" +
+                            "   \"msgType\": \"" + "text" + "\",\n" +
+                            "   \"recipient\": \"" + Recipient_Username + "\",\n" +
+                            "   \"sender_fullname\": \"" + fullname + "\",\n" +
+                            "   \"sender_profile_pic_url\": \"" + profile_pic + "\",\n" +
+                            "   \"sender_email\": \"" + email + "\",\n" +
+                            "   \"sender_uniqueId\": \"" + uniqueId + "\"\n" +
                             "}";
 
                     try {
@@ -326,26 +573,70 @@ public class ChatBoxActivity extends AppCompatActivity {
 
                     messagetxt.setText("");
 
-                    long unixTime = System.currentTimeMillis() / 1000L;
-
-                    Toast.makeText(getApplicationContext(),unixTime+"",Toast.LENGTH_LONG).show();
-
-                    String inshort = GetTimeFromStamp.getTimeAgo(unixTime,getApplicationContext());
-
-                    Toast.makeText(getApplicationContext(),inshort+"",Toast.LENGTH_LONG).show();
 
 
-                    // make instance of message
-                    Message m = new Message(Nickname,msg,uniqueId,"","",unixTime);
+
+                    //String inshort = GetTimeFromStamp.getTimeAgo(unixTime,getApplicationContext());
 
 
-                    MessageList.add(m);
 
-                    chatBoxAdapter.notifyDataSetChanged();
+                    Needle.onBackgroundThread().execute(new UiRelatedTask<Integer>() {
+                        @Override
+                        protected Integer doWork() {
+
+                            long unixTime = System.currentTimeMillis() / 1000L;
+
+                            ChatBoxDBHelper chatBoxDBHelperSmsg = new ChatBoxDBHelper(getApplicationContext());
+                            chatBoxDBHelper.open();
+                            chatBoxDBHelperSmsg.open();
+                            // make instance of message
+                            chatBoxDBHelperSmsg.SaveSentRecivedMSG(Recipient_UserChatTable, Nickname,Recipient_Username,msg,"text",Long.toString(unixTime),0,profile_thumb_pic,Recipient_profile_thumb_pic);
+
+                            Cursor chatDetails1 = chatBoxDBHelper.getUserChatHistory(Recipient_UserChatTable);
+
+                            //ArrayList<Message> mArrayList = new ArrayList<Message>();
+                            mArrayList.clear();
+
+                            for(chatDetails1.moveToFirst(); !chatDetails1.isAfterLast(); chatDetails1.moveToNext()) {
+                                // The Cursor is now set to the right position
+                                Message testModel = new Message(
+                                        Nickname,
+                                        Recipient_Username,
+                                        chatDetails1.getString(chatDetails1.getColumnIndexOrThrow(ChatBox_Message)),
+                                        profile_thumb_pic,
+                                        Recipient_profile_thumb_pic,
+                                        chatDetails1.getString(chatDetails1.getColumnIndexOrThrow(ChatBox_MsgType)),
+                                        chatDetails1.getLong(chatDetails1.getColumnIndexOrThrow(ChatBox_UnixTimeStamp)),
+                                        chatDetails1.getInt(chatDetails1.getColumnIndexOrThrow(ChatBox_ID)),
+                                        chatDetails1.getInt(chatDetails1.getColumnIndexOrThrow(ChatBox_WHICH))
+                                );
+                                mArrayList.add(testModel);
+                            }
+                            chatBoxDBHelper.close();
+                            chatBoxDBHelperSmsg.close();
+
+                            Log.i("user Chat History : ", mArrayList.toString());
+
+
+                            int result = 1+2;
+                            return result;
+                        }
+
+                        @Override
+                        protected void thenDoUiRelatedWork(Integer result) {
+
+
+                            chatBoxAdapter = new ChatBoxAdapter(ChatBoxActivity.this,R.id.my_msg_item_layout, mArrayList);
+
+                            // Attach cursor adapter to the ListView
+                            messageslist.setAdapter(chatBoxAdapter);
+                            messageslist.setSelection(chatBoxAdapter.getCount() - 1);
+                            //mSomeTextView.setText("result: " + result);
+                        }
+                    });
 
 
                 }
-
 
             }
         });
@@ -366,11 +657,10 @@ public class ChatBoxActivity extends AppCompatActivity {
                     @Override
                     public void onClick(View v) {
 
+                        // start picker to get image for cropping and then use the image in cropping activity
                         CropImage.activity()
-                               // .setAspectRatio(1,1)
                                 .setGuidelines(CropImageView.Guidelines.ON)
                                 .start(ChatBoxActivity.this);
-
                     }
                 });
 
@@ -399,18 +689,18 @@ public class ChatBoxActivity extends AppCompatActivity {
                         //Userconnected = "";
 
 
-                        Message m = new Message("","","","",data,0);
+//                        Message m = new Message("","","",0);
 
 
-                        MessageList.add(m);
+                       // MessageList.add(m);
                         //Userconnected = data;
 
 
-                        chatBoxAdapter.notifyDataSetChanged();
+                      //  chatBoxAdapter.notifyDataSetChanged();
 
                         //set the adapter for the recycler view
 
-                        myListView.setAdapter(chatBoxAdapter);
+                        //myListView.setAdapter(chatBoxAdapter);
 
                         Toast.makeText(ChatBoxActivity.this,data,Toast.LENGTH_SHORT).show();
 
@@ -446,11 +736,18 @@ public class ChatBoxActivity extends AppCompatActivity {
                         try {
                             JSONObject data = (JSONObject) args[0];
 
+
+                            Log.i("Data For MSG",data.toString());
                             //extract data from fired event
 
-                            String nickname = data.getString("senderNickname");
-                            String message = data.getString("message");
-                            String uniqueId = data.getString("uniqueId");
+                            String susername = data.getString("sender");
+                            String message = data.getString("msg");
+                            String recipient = data.getString("recipient");
+                            String fullname = data.getString("fullname");
+                            String email = data.getString("email");
+                            String profile_pic = data.getString("profile_pic_url");
+                            String sender_uniqueId = data.getString("uniqueId");
+                            String msgType = data.getString("msgType");
 
                             long unixTime = System.currentTimeMillis() / 1000L;
 
@@ -460,23 +757,74 @@ public class ChatBoxActivity extends AppCompatActivity {
 
                            // Toast.makeText(getApplicationContext(),inshort+"",Toast.LENGTH_LONG).show();
 
-                            Message m = new Message(nickname,message,uniqueId,"",Toprofile_thumb_pic,unixTime);
+                            final ChatBoxDBHelper chatBoxDBHelperRmsg = new ChatBoxDBHelper(getApplicationContext());
+                            chatBoxDBHelperRmsg.open();
+
+                            chatBoxDBHelperRmsg.SaveSentRecivedMSG(Recipient_UserChatTable, susername,Nickname,message,msgType,Long.toString(unixTime),1,profile_thumb_pic,Recipient_profile_thumb_pic);
 
 
-                            //add the message to the messageList
+                            Needle.onBackgroundThread().execute(new UiRelatedTask<Integer>() {
+                                @Override
+                                protected Integer doWork() {
 
-                            MessageList.add(m);
 
-                            // add the new updated list to the dapter
-                            //chatBoxAdapter = new ChatBoxAdapter(MessageList);
+                                    chatBoxDBHelper.open();
+                                    Cursor chatDetails1 = chatBoxDBHelper.getUserChatHistory(Recipient_UserChatTable);
 
-                            // notify the adapter to update the recycler view
+                                    //  ArrayList<Message> mArrayList = new ArrayList<Message>();
+                                    mArrayList.clear();
 
-                            chatBoxAdapter.notifyDataSetChanged();
+                                    for(chatDetails1.moveToFirst(); !chatDetails1.isAfterLast(); chatDetails1.moveToNext()) {
+                                        // The Cursor is now set to the right position
+                                        Message testModel = new Message(
+                                                Nickname,
+                                                Recipient_Username,
+                                                chatDetails1.getString(chatDetails1.getColumnIndexOrThrow(ChatBox_Message)),
+                                                profile_thumb_pic,
+                                                Recipient_profile_thumb_pic,
+                                                chatDetails1.getString(chatDetails1.getColumnIndexOrThrow(ChatBox_MsgType)),
+                                                chatDetails1.getLong(chatDetails1.getColumnIndexOrThrow(ChatBox_UnixTimeStamp)),
+                                                chatDetails1.getInt(chatDetails1.getColumnIndexOrThrow(ChatBox_ID)),
+                                                chatDetails1.getInt(chatDetails1.getColumnIndexOrThrow(ChatBox_WHICH))
+                                        );
+                                        mArrayList.add(testModel);
+                                    }
+                                    chatBoxDBHelperRmsg.open();
+                                    chatBoxDBHelper.close();
 
-                            //set the adapter for the recycler view
+                                    Log.i("user Chat History : ", mArrayList.toString());
 
-                            //myListView.setAdapter(chatBoxAdapter);
+                                    int result = 1+2;
+                                    return result;
+
+                                }
+
+                                @Override
+                                protected void thenDoUiRelatedWork(Integer result) {
+
+
+                                    chatBoxAdapter = new ChatBoxAdapter(ChatBoxActivity.this,R.id.my_msg_item_layout, mArrayList);
+
+                                    // Attach cursor adapter to the ListView
+                                    messageslist.setAdapter(chatBoxAdapter);
+                                    messageslist.setSelection(chatBoxAdapter.getCount() - 1);
+
+
+                                }
+                            });
+
+/*
+                            new Handler().post(new Runnable() {
+                                @Override
+                                public void run() {
+
+
+
+                                }
+                            });
+
+
+ */
 
                         } catch (JSONException e) {
                             e.printStackTrace();
@@ -488,14 +836,34 @@ public class ChatBoxActivity extends AppCompatActivity {
             }
         });
 
-
-
     }
+
+/*
+    private class AsyncTaskExample extends AsyncTask<String, String, Bitmap> {
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+
+        }
+        @Override
+        protected Bitmap doInBackground(String... strings) {
+
+        }
+        @Override
+        protected void onPostExecute(Bitmap bitmap) {
+            super.onPostExecute(bitmap);
+
+        }
+    }
+
+    
+ */
+
 
     @Override
     public void onBackPressed() {
         super.onBackPressed();
-        if (bottomSheetDialog.isShowing()){
+        if (bottomSheetDialog != null && bottomSheetDialog.isShowing()){
             bottomSheetDialog.dismiss();
         }
 
@@ -511,6 +879,17 @@ public class ChatBoxActivity extends AppCompatActivity {
         socket.off(Socket.EVENT_CONNECT_TIMEOUT, onConnectError);
     }
 
+
+    private void setClipboard(Context context, String text) {
+        if(android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.HONEYCOMB) {
+            android.text.ClipboardManager clipboard = (android.text.ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+            clipboard.setText(text);
+        } else {
+            android.content.ClipboardManager clipboard = (android.content.ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+            android.content.ClipData clip = android.content.ClipData.newPlainText("Copied Text", text);
+            clipboard.setPrimaryClip(clip);
+        }
+    }
 
     public void GetUsernameAlertDialog(){
 
@@ -599,10 +978,11 @@ public class ChatBoxActivity extends AppCompatActivity {
                 @Override
                 public void run() {
                     JSONObject data = (JSONObject) args[0];
-                    // Log.i(TAG, "run: " + args[0]);
+                     Log.i("ChatBoxActivity", "run: " + args[0]);
                     try {
                         Boolean typingOrNot = data.getBoolean("typing");
-                        String userName = data.getString("fromuser") + " is Typing...";
+                        String userName = data.getString("sender");
+                        userName = userName  + " is Typing...";
                         String id = data.getString("uniqueId");
 
                         if(id.equals(uniqueId)){
@@ -672,58 +1052,250 @@ public class ChatBoxActivity extends AppCompatActivity {
             CropImage.ActivityResult result = CropImage.getActivityResult(data);
             if (resultCode == RESULT_OK) {
 
-               Uri imgresultUri = result.getUri();
-
-                //File thumb_pic_file = new File(imgresultUri.getPath());
-/*
-                try {
-/*
-                    thumb_bitmap = new Compressor(SignupActivity.this)
-                            .setMaxHeight(200)
-                            .setMaxWidth(200)
-                            .setQuality(50)
-                            .compressToBitmap(thumb_pic_file);
-
-
-
-
-                    //converting image to base64 string
-                    ByteArrayOutputStream baos_thumb = new ByteArrayOutputStream();
-                    thumb_bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos_thumb);
-                    byte[] thumb_imageBytes = baos_thumb.toByteArray();
-                    thumb_imageString = Base64.encodeToString(thumb_imageBytes, Base64.DEFAULT);
-
-
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                imgresultUri = result.getUri();
 
                 try {
-
                     bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), imgresultUri);
-
-
-                    //setting_profile_pic.setImageBitmap(bitmap);
-
-                    //converting image to base64 string
-                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos);
-                    byte[] imageBytes = baos.toByteArray();
-                    imageString = Base64.encodeToString(imageBytes, Base64.DEFAULT);
-
-
-
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
 
-                */
+                final File imagefile = new File(String.valueOf(imgresultUri));
+
+
+                new Handler().post(new Runnable() {
+                    @Override
+                    public void run() {
+
+                        try {
+                            bitmap = new Compressor(ChatBoxActivity.this)
+
+                                    .setQuality(50)
+                                    .compressToBitmap(imagefile);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+
+
+                    }
+                });
+
+
+                //converting image to base64 string
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 70, baos);
+                byte[] imageBytes = baos.toByteArray();
+
+                //long imagesize = imageBytes.length;
+
+                imageString = Base64.encodeToString(imageBytes, Base64.DEFAULT);
+
+                Log.i("Image Base64 String: ", imageString);
+
+                chatBoxDBHelper.open();
+
+                long unixTime = System.currentTimeMillis() / 1000L;
+
+                chatBoxDBHelper.SaveSentRecivedMSG(Recipient_UserChatTable, Nickname, Recipient_Username, imageString, "image", Long.toString(unixTime), 0, profile_thumb_pic, Recipient_profile_thumb_pic);
+
+                String imgdata = "{\n"+
+                        "   \"msg\": \"" + imageString + "\",\n" +
+                        "   \"sender\": \"" + Nickname + "\",\n" +
+                        "   \"msgType\": \"" + "image" + "\",\n" +
+                        "   \"recipient\": \"" + Recipient_Username + "\",\n" +
+                        "   \"sender_fullname\": \"" + fullname + "\",\n" +
+                        "   \"sender_profile_pic_url\": \"" + profile_pic + "\",\n" +
+                        "   \"sender_email\": \"" + email + "\",\n" +
+                        "   \"sender_uniqueId\": \"" + uniqueId + "\"\n" +
+                        "}";
+
+                try {
+                    JSONObject Jsonobj = new JSONObject(imgdata);
+                    //socket.emit("entity", obj);
+                    socket.emit("messagedetectionprivate",Jsonobj);
+                    //Toast.makeText(getApplicationContext(),Jsonobj.toString(),Toast.LENGTH_LONG).show();
+
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+
+
+                Needle.onBackgroundThread().execute(new UiRelatedTask<Integer>() {
+                    @Override
+                    protected Integer doWork() {
+
+                        Cursor chatDetails1 = chatBoxDBHelper.getUserChatHistory(Recipient_UserChatTable);
+
+                        // ArrayList<Message> mArrayList = new ArrayList<Message>();
+                        mArrayList.clear();
+
+                        for(chatDetails1.moveToFirst(); !chatDetails1.isAfterLast(); chatDetails1.moveToNext()) {
+                            // The Cursor is now set to the right position
+                            Message testModel = new Message(
+                                    Nickname,
+                                    Recipient_Username,
+                                    chatDetails1.getString(chatDetails1.getColumnIndexOrThrow(ChatBox_Message)),
+                                    profile_thumb_pic,
+                                    Recipient_profile_thumb_pic,
+                                    chatDetails1.getString(chatDetails1.getColumnIndexOrThrow(ChatBox_MsgType)),
+                                    chatDetails1.getLong(chatDetails1.getColumnIndexOrThrow(ChatBox_UnixTimeStamp)),
+                                    chatDetails1.getInt(chatDetails1.getColumnIndexOrThrow(ChatBox_ID)),
+                                    chatDetails1.getInt(chatDetails1.getColumnIndexOrThrow(ChatBox_WHICH))
+                            );
+                            mArrayList.add(testModel);
+                        }
+                        chatBoxDBHelper.close();
+
+                        Log.i("user Chat History : ", mArrayList.toString());
+
+                        int result = 1+2;
+                        return result;
+                    }
+
+                    @Override
+                    protected void thenDoUiRelatedWork(Integer result) {
+
+
+                        chatBoxAdapter = new ChatBoxAdapter(ChatBoxActivity.this,R.id.my_msg_item_layout, mArrayList);
+
+                        // Attach cursor adapter to the ListView
+                        messageslist.setAdapter(chatBoxAdapter);
+                        messageslist.setSelection(chatBoxAdapter.getCount() - 1);
+
+
+                        //mSomeTextView.setText("result: " + result);
+                    }
+                });
+
+
+
+            } else if (resultCode == CropImage.CROP_IMAGE_ACTIVITY_RESULT_ERROR_CODE) {
+                Exception error = result.getError();
+            }
+
+        }
+    }
+/*
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == CropImage.CROP_IMAGE_ACTIVITY_REQUEST_CODE) {
+            CropImage.ActivityResult result = CropImage.getActivityResult(data);
+            if (resultCode == RESULT_OK && data != null && data.getData() != null) {
+
+                Uri filePath = data.getData();
+
+                try {
+                    bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), filePath);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+                File imagefile = new File(String.valueOf(filePath));
+
+                //converting image to base64 string
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 70, baos);
+                byte[] imageBytes = baos.toByteArray();
+
+                //long imagesize = imageBytes.length;
+
+                imageString = Base64.encodeToString(imageBytes, Base64.DEFAULT);
+
+                Log.i("Image Base64 String: ", imageString);
+
+
+                long unixTime = System.currentTimeMillis() / 1000L;
+
+                chatBoxDBHelper.SaveSentRecivedMSG(Recipient_UserChatTable, Nickname,Recipient_Username,imageString,"image",Long.toString(unixTime),0,profile_thumb_pic,Recipient_profile_thumb_pic);
+
+                Cursor chatDetails = chatBoxDBHelper.getUserChatHistory(Recipient_UserChatTable);
+                //Cursor allUserchatDetails = chatBoxDBHelper.getallUserChatHistory();
+
+                Log.i("user Chat History : ",DatabaseUtils.dumpCursorToString(chatDetails));
+                // Log.i("All user Chat History",DatabaseUtils.dumpCursorToString(allUserchatDetails));
+
+                if (chatDetails != null && chatDetails.getCount() > 0){
+
+                    chatBoxAdapter = new ChatBoxAdapter(ChatBoxActivity.this, chatDetails,false);
+
+                    // Attach cursor adapter to the ListView
+                    messageslist.setAdapter(chatBoxAdapter);
+
+                }
 
             } else if (resultCode == CropImage.CROP_IMAGE_ACTIVITY_RESULT_ERROR_CODE) {
                 Exception error = result.getError();
             }
         }
+
+
+
+
+
+        if (requestCode == PICK_IMAGE_REQUEST && resultCode == RESULT_OK && data != null && data.getData() != null) {
+            Uri filePath = data.getData();
+
+            try {
+                bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), filePath);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            File imagefile = new File(String.valueOf(filePath));
+
+            //converting image to base64 string
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 70, baos);
+            byte[] imageBytes = baos.toByteArray();
+
+            //long imagesize = imageBytes.length;
+
+            imageString = Base64.encodeToString(imageBytes, Base64.DEFAULT);
+
+            Log.i("Image Base64 String: ", imageString);
+
+
+            long unixTime = System.currentTimeMillis() / 1000L;
+
+            chatBoxDBHelper.SaveSentRecivedMSG(Recipient_UserChatTable, Nickname,Recipient_Username,imageString,"image",Long.toString(unixTime),0,profile_thumb_pic,Recipient_profile_thumb_pic);
+
+            Cursor chatDetails = chatBoxDBHelper.getUserChatHistory(Recipient_UserChatTable);
+            //Cursor allUserchatDetails = chatBoxDBHelper.getallUserChatHistory();
+
+            Log.i("user Chat History : ",DatabaseUtils.dumpCursorToString(chatDetails));
+            // Log.i("All user Chat History",DatabaseUtils.dumpCursorToString(allUserchatDetails));
+
+            if (chatDetails != null && chatDetails.getCount() > 0){
+
+                chatBoxAdapter = new ChatBoxAdapter(ChatBoxActivity.this, chatDetails,false);
+
+                // Attach cursor adapter to the ListView
+                messageslist.setAdapter(chatBoxAdapter);
+
+            }
+
+
+        }
+
+
+ */
+
+
+
+
+
+    public String getStringImage(Bitmap bmp){
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        bmp.compress(Bitmap.CompressFormat.JPEG, 70, baos);
+        byte[] imageBytes = baos.toByteArray();
+        String encodedImage = Base64.encodeToString(imageBytes, Base64.DEFAULT);
+        return encodedImage;
     }
+
+
 
 
 

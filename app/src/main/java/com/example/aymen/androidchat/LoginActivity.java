@@ -63,6 +63,7 @@ public class LoginActivity extends AppCompatActivity {
 
     private final String URL="http://rt-chat07.herokuapp.com/login";
    // private final String URL="http://192.168.43.38/login";
+   //private static final String URL = "http://192.168.12.1/login";
 
 
     public final Pattern EMAIL_ADDRESS_PATTERN = Pattern.compile(
@@ -97,8 +98,6 @@ public class LoginActivity extends AppCompatActivity {
         btnlogin = findViewById(R.id.btnlogin);
         btnsignuphere = findViewById(R.id.btnsignuphere);
 
-        chatBoxDBHelper = new ChatBoxDBHelper(getApplicationContext());
-        chatBoxDBHelper.open();
 
         progressDialog = new ProgressDialog(LoginActivity.this);
 
@@ -111,6 +110,9 @@ public class LoginActivity extends AppCompatActivity {
 
                 Toast.makeText(getApplicationContext(),"Permissions Granted!",Toast.LENGTH_LONG).show();
                 // do your task.
+
+                chatBoxDBHelper = new ChatBoxDBHelper(getApplicationContext());
+                chatBoxDBHelper.open();
 
                 SharedPreferences prefs = getSharedPreferences(SH_Loggedin_Data, MODE_PRIVATE);
                 boolean looggedin  = prefs.getBoolean(SH_Loggedin,false);

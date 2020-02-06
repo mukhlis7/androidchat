@@ -7,6 +7,8 @@ import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.database.Cursor;
+import android.database.DatabaseUtils;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
@@ -37,6 +39,12 @@ import org.json.JSONObject;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
+import static com.example.aymen.androidchat.ChatBoxDBHelper.Loggedin_User_Email;
+import static com.example.aymen.androidchat.ChatBoxDBHelper.Loggedin_User_Fullname;
+import static com.example.aymen.androidchat.ChatBoxDBHelper.Loggedin_User_Profile_pic_url;
+import static com.example.aymen.androidchat.ChatBoxDBHelper.Loggedin_User_Thumb_pic_url;
+import static com.example.aymen.androidchat.ChatBoxDBHelper.Loggedin_User_Token;
+import static com.example.aymen.androidchat.ChatBoxDBHelper.Loggedin_User_Username;
 import static com.example.aymen.androidchat.LoginActivity.SH_Email;
 import static com.example.aymen.androidchat.LoginActivity.SH_Fullname;
 import static com.example.aymen.androidchat.LoginActivity.SH_Loggedin_Data;
@@ -103,25 +111,25 @@ public class CurrentUserActivity extends AppCompatActivity {
         progressDialog.show();
 
 
-        JSONArray jsonArray = chatBoxDBHelper.getLoggedinUserDetails();
+        Cursor su = chatBoxDBHelper.getLoggedinUserDetails();
+        Log.i("LOgged in user TOken : ", DatabaseUtils.dumpCursorToString(su));
 
-        try {
-            String logindata = jsonArray.getString(0);
+        if (su.moveToFirst()){
+            do{
+                imageurl = su.getString(su.getColumnIndexOrThrow(Loggedin_User_Profile_pic_url));
+                thumburl = su.getString(su.getColumnIndexOrThrow(Loggedin_User_Thumb_pic_url));
 
-            JSONObject jsonObject = new JSONObject(logindata);
+                current_user_username.setText(su.getString(su.getColumnIndexOrThrow(Loggedin_User_Username)));
+                current_user_fullname.setText(su.getString(su.getColumnIndexOrThrow(Loggedin_User_Fullname)));
+                current_user_email.setText(su.getString(su.getColumnIndexOrThrow(Loggedin_User_Email)));
+               // Log.i("LOgged in user TOken : ",logintoken);
+            }while(su.moveToNext());
+        }
+        su.close();
 
-            imageurl = jsonObject.getString("_Profile_pic_URL");
-            thumburl = jsonObject.getString("_Thumb_pic_URL");
 
-            current_user_username.setText(jsonObject.getString("_Username"));
-            current_user_fullname.setText(jsonObject.getString("_Fullname"));
-            current_user_email.setText(jsonObject.getString("_Email"));
             Picasso.get().load(thumburl).placeholder(R.drawable.ic_male).into(setting_profilepic);
 
-            //current_user_fullname.setText(jsonArray.getString(1));
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
 
         Log.i("Data From LocalDAtaBAse",chatBoxDBHelper.getLoggedinUserDetails().toString());
 
