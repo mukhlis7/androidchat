@@ -6,11 +6,14 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
 import android.annotation.SuppressLint;
+import android.app.Dialog;
+import android.app.ProgressDialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.DatabaseUtils;
 import android.graphics.Bitmap;
@@ -26,17 +29,30 @@ import android.util.Base64;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.Window;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.BaseAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.Spinner;
+import android.widget.SpinnerAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
 
 
+import com.android.volley.AuthFailureError;
+import com.android.volley.DefaultRetryPolicy;
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
 import com.github.nkzawa.emitter.Emitter;
 import com.github.nkzawa.socketio.client.IO;
 import com.github.nkzawa.socketio.client.Socket;
@@ -53,6 +69,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -110,6 +127,7 @@ public class ChatBoxActivity extends AppCompatActivity {
     public String Recipient_Username;
     public  String Recipient_UserChatTable;
     private static final String SIOURL = "http://rt-chat07.herokuapp.com/";
+    private static final String TranlationURL = "http://rt-chat07.herokuapp.com/translatetext";
     //private static final String SIOURL = "http://rt-chat07.herokuapp.com/";
    // private static final String SIOURL = "http://192.168.43.38/";
     //private static final String SIOURL = "http://192.168.12.1/";
@@ -123,6 +141,22 @@ public class ChatBoxActivity extends AppCompatActivity {
 
     Bitmap bitmap;
     Bitmap thumb_bitmap;
+
+    private EditText edittxttranslated;
+    private EditText edittxttranslate;
+    Button btn_popup;
+
+    String[] title;
+    String[] title_short;
+    String[] title_auto;
+    String[] title_short_auto;
+    private ProgressDialog progressDialog;
+    String spinner_item;
+    String selected_lang_short;
+
+    int autotranslate = 0;
+    SpinnerAdapter adapterfrom;
+    SpinnerAdapter adapterto;
 
 
     @SuppressLint("HandlerLeak")
@@ -269,6 +303,7 @@ public class ChatBoxActivity extends AppCompatActivity {
         toolbar_title = findViewById(R.id.chatbox_custom_Title);
         toolbar_subtitle = findViewById(R.id.chatbox_custom_subTitle);
         toolbar_image = findViewById(R.id.chatbox_custom_image);
+        progressDialog = new ProgressDialog(ChatBoxActivity.this);
 
         toolbar_title.setText(Recipient_Fullname);
         toolbar_subtitle.setText(Recipient_Username);
@@ -401,6 +436,266 @@ public class ChatBoxActivity extends AppCompatActivity {
         }
 
 
+        send.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View view) {
+
+
+                title = getResources().getStringArray(R.array.longlanguages);
+                title_short = getResources().getStringArray(R.array.shortlanguages);
+
+                title_auto = getResources().getStringArray(R.array.longlanguagesauto);
+                title_short_auto = getResources().getStringArray(R.array.shortlanguagesauto);
+
+                btn_popup = (Button) findViewById(R.id.button1);
+
+                adapterfrom = new SpinnerAdapter(getApplicationContext(),title_auto);
+                adapterto = new SpinnerAdapter(getApplicationContext(), title);
+
+                AlertDialog.Builder builderSingle = new AlertDialog.Builder(ChatBoxActivity.this);
+                //builderSingle.setIcon(R.drawable.ic_launcher);
+                builderSingle.setTitle("Select Translation Mode:-");
+
+                final ArrayAdapter<String> arrayAdapter = new ArrayAdapter<String>(ChatBoxActivity.this, R.layout.chatbox_dialog_options);
+                arrayAdapter.add("Manual Translation");
+                arrayAdapter.add("OTW Translation");
+               // arrayAdapter.add("Jignesh");
+               // arrayAdapter.add("Umang");
+               // arrayAdapter.add("Gatti");
+
+                builderSingle.setNegativeButton("cancel", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.dismiss();
+                    }
+                });
+
+                builderSingle.setAdapter(arrayAdapter, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(final DialogInterface dialog, int which) {
+                        String strName = arrayAdapter.getItem(which);
+
+                        if (strName.equals("Manual Translation")) {
+
+                            // TODO Auto-generated method stub
+                            final Dialog dialogcustom = new Dialog(ChatBoxActivity.this);
+                            dialogcustom.requestWindowFeature(Window.FEATURE_NO_TITLE);
+                            dialogcustom.setContentView(R.layout.chatboxcustomdialogbox);
+                            dialogcustom.setCancelable(false);
+
+                            // set the custom dialog components - text, image and button
+                            final Spinner spinner = (Spinner) dialogcustom.findViewById(R.id.spinner1);
+                            final Spinner spinner2 = (Spinner) dialogcustom.findViewById(R.id.spinner12);
+                            edittxttranslate = (EditText) dialogcustom.findViewById(R.id.editText1);
+                            edittxttranslated = (EditText) dialogcustom.findViewById(R.id.editText12);
+                            Button button = (Button) dialogcustom.findViewById(R.id.button1);
+                            Button btntranslate = (Button) dialogcustom.findViewById(R.id.button2);
+                            Button btnsend = (Button) dialogcustom.findViewById(R.id.button3);
+
+                            spinner.setAdapter(adapterfrom);
+                            spinner2.setAdapter(adapterto);
+
+                            edittxttranslate.setText(messagetxt.getText().toString().trim());
+
+                            spinner2.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                                @Override
+                                public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+
+                                    selected_lang_short = title_short[i];
+
+                                }
+
+                                @Override
+                                public void onNothingSelected(AdapterView<?> adapterView) {
+
+                                }
+                            });
+
+                            spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+
+                                @Override
+                                public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                                    // TODO Auto-generated method stub
+                                    spinner_item = title_short_auto[position];
+
+                                    if (spinner_item.equals("auto")){
+
+                                        autotranslate = 1;
+
+                                    }else {
+                                        autotranslate = 0;
+
+                                    }
+                                }
+
+                                @Override
+                                public void onNothingSelected(AdapterView<?> parent) {
+                                    // TODO Auto-generated method stub
+
+                                }
+                            });
+
+                            btntranslate.setOnClickListener(new View.OnClickListener() {
+                                @Override
+                                public void onClick(View view) {
+
+                                    progressDialog.setMessage("Translating, please wait...");
+                                    progressDialog.setCancelable(false);
+                                    progressDialog.setCanceledOnTouchOutside(false);
+                                    progressDialog.show();
+
+                                    String texttotranslate = edittxttranslate.getText().toString().trim();
+
+                                    if (texttotranslate.length() > 0){
+
+                                        String data = "{\n"+
+                                                "   \"auto\": \"" + autotranslate + "\",\n" +
+                                                "   \"from_lang\": \"" + spinner_item + "\",\n" +
+                                                "   \"to_lang\": \"" + selected_lang_short + "\",\n" +
+                                                "   \"text\": \"" + texttotranslate + "\"\n" +
+                                                "}";
+
+
+                                        Toast.makeText(getApplicationContext(),data,Toast.LENGTH_LONG).show();
+
+                                        Log.i("Data from DialogBox", data);
+
+                                        Submittext(data);
+
+                                    }else {
+
+                                        edittxttranslate.setError("Plz, Enter A text!");
+
+                                    }
+
+                                }
+                            });
+
+                            button.setOnClickListener(new View.OnClickListener() {
+
+                                @Override
+                                public void onClick(View v) {
+                                    // TODO Auto-generated method stub
+                                    dialogcustom.dismiss();
+                                    //Toast.makeText(getApplicationContext(), spinner_item + " - " + edittxttranslate.getText().toString().trim(), Toast.LENGTH_LONG).show();
+                                }
+                            });
+
+
+                            btnsend.setOnClickListener(new View.OnClickListener() {
+                                @Override
+                                public void onClick(View view) {
+
+                                   // String msgtxt  = edittxttranslated.getText().toString().trim();
+
+                                    if(!edittxttranslated.getText().toString().trim().isEmpty()){
+
+                                        final String msg = edittxttranslated.getText().toString();
+
+                                        final Cursor chatDetails = chatBoxDBHelper.getUserChatHistory(Recipient_UserChatTable);
+
+
+                                        String data = "{\n"+
+                                                "   \"msg\": \"" + msg + "\",\n" +
+                                                "   \"sender\": \"" + Nickname + "\",\n" +
+                                                "   \"msgType\": \"" + "text" + "\",\n" +
+                                                "   \"recipient\": \"" + Recipient_Username + "\",\n" +
+                                                "   \"sender_fullname\": \"" + fullname + "\",\n" +
+                                                "   \"sender_profile_pic_url\": \"" + profile_pic + "\",\n" +
+                                                "   \"sender_email\": \"" + email + "\",\n" +
+                                                "   \"sender_uniqueId\": \"" + uniqueId + "\"\n" +
+                                                "}";
+
+                                        try {
+                                            JSONObject Jsonobj = new JSONObject(data);
+                                            //socket.emit("entity", obj);
+                                            socket.emit("messagedetectionprivate",Jsonobj);
+                                            //Toast.makeText(getApplicationContext(),Jsonobj.toString(),Toast.LENGTH_LONG).show();
+
+                                        } catch (JSONException e) {
+                                            e.printStackTrace();
+                                        }
+
+                                        messagetxt.setText("");
+                                        dialogcustom.dismiss();
+
+                                        //String inshort = GetTimeFromStamp.getTimeAgo(unixTime,getApplicationContext());
+
+                                        Needle.onBackgroundThread().execute(new UiRelatedTask<Integer>() {
+                                            @Override
+                                            protected Integer doWork() {
+
+                                                long unixTime = System.currentTimeMillis() / 1000L;
+
+                                                ChatBoxDBHelper chatBoxDBHelperSmsg = new ChatBoxDBHelper(getApplicationContext());
+                                                chatBoxDBHelper.open();
+                                                chatBoxDBHelperSmsg.open();
+                                                // make instance of message
+                                                chatBoxDBHelperSmsg.SaveSentRecivedMSG(Recipient_UserChatTable, Nickname,Recipient_Username,msg,"text",Long.toString(unixTime),0,profile_thumb_pic,Recipient_profile_thumb_pic);
+
+                                                Cursor chatDetails1 = chatBoxDBHelper.getUserChatHistory(Recipient_UserChatTable);
+
+                                                //ArrayList<Message> mArrayList = new ArrayList<Message>();
+                                                mArrayList.clear();
+
+                                                for(chatDetails1.moveToFirst(); !chatDetails1.isAfterLast(); chatDetails1.moveToNext()) {
+                                                    // The Cursor is now set to the right position
+                                                    Message testModel = new Message(
+                                                            Nickname,
+                                                            Recipient_Username,
+                                                            chatDetails1.getString(chatDetails1.getColumnIndexOrThrow(ChatBox_Message)),
+                                                            profile_thumb_pic,
+                                                            Recipient_profile_thumb_pic,
+                                                            chatDetails1.getString(chatDetails1.getColumnIndexOrThrow(ChatBox_MsgType)),
+                                                            chatDetails1.getLong(chatDetails1.getColumnIndexOrThrow(ChatBox_UnixTimeStamp)),
+                                                            chatDetails1.getInt(chatDetails1.getColumnIndexOrThrow(ChatBox_ID)),
+                                                            chatDetails1.getInt(chatDetails1.getColumnIndexOrThrow(ChatBox_WHICH))
+                                                    );
+                                                    mArrayList.add(testModel);
+                                                }
+                                                chatBoxDBHelper.close();
+                                                chatBoxDBHelperSmsg.close();
+
+                                                Log.i("user Chat History : ", mArrayList.toString());
+
+
+                                                int result = 1+2;
+                                                return result;
+                                            }
+
+                                            @Override
+                                            protected void thenDoUiRelatedWork(Integer result) {
+
+
+                                                chatBoxAdapter = new ChatBoxAdapter(ChatBoxActivity.this,R.id.my_msg_item_layout, mArrayList);
+
+                                                // Attach cursor adapter to the ListView
+                                                messageslist.setAdapter(chatBoxAdapter);
+                                                messageslist.setSelection(chatBoxAdapter.getCount() - 1);
+                                                //mSomeTextView.setText("result: " + result);
+                                            }
+                                        });
+
+
+                                    }
+
+                                }
+                            });
+
+
+                            dialogcustom.show();
+
+
+                        }
+                    }
+                });
+                builderSingle.show();
+
+                return true;
+            }
+        });
+
+
         messageslist.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
             @Override
             public boolean onItemLongClick(AdapterView<?> parent, View view, final int position, long id) {
@@ -484,7 +779,6 @@ public class ChatBoxActivity extends AppCompatActivity {
                                                 messageslist.setAdapter(chatBoxAdapter);
                                                 messageslist.setSelection(chatBoxAdapter.getCount() - 1);
 
-
                                             }
 
                                         }
@@ -493,10 +787,6 @@ public class ChatBoxActivity extends AppCompatActivity {
                                     });
 
                                     chatBoxDBHelper.close();
-
-
-
-
                                 }
                             });
 
@@ -838,27 +1128,84 @@ public class ChatBoxActivity extends AppCompatActivity {
 
     }
 
-/*
-    private class AsyncTaskExample extends AsyncTask<String, String, Bitmap> {
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
+    private void Submittext(String data)
+    {
 
-        }
-        @Override
-        protected Bitmap doInBackground(String... strings) {
+        RequestQueue requestQueue = Volley.newRequestQueue(getApplicationContext());
+        final String finalSavedata = data;
+        StringRequest stringRequest = new StringRequest(Request.Method.POST, TranlationURL, new Response.Listener<String>() {
+            @Override
+            public void onResponse(String response) {
+                if (progressDialog.isShowing()) {
+                    progressDialog.dismiss();
 
-        }
-        @Override
-        protected void onPostExecute(Bitmap bitmap) {
-            super.onPostExecute(bitmap);
+                }
+               // btnlogin.setEnabled(true);
+                // getWindow().clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
 
-        }
+                Log.i("Data from login",response);
+
+                try {
+                    JSONObject objres = new JSONObject(response);
+
+                    boolean isregistered = objres.getBoolean("result");
+                    //String message = objres.getString("message");
+
+                    if (isregistered) {
+
+                        String translatedtextfromweb = objres.getString("text");
+                        edittxttranslated.setText(translatedtextfromweb);
+
+                    }else {
+
+                        Toast.makeText(getApplicationContext(),"Unable to Translate",Toast.LENGTH_LONG).show();
+                    }
+
+
+                } catch (JSONException e) {
+                    //btnlogin.setEnabled(true);
+                    progressDialog.dismiss();
+                    Toast.makeText(getApplicationContext(),"Unable to parse Json",Toast.LENGTH_LONG).show();
+
+                    //Toast.makeText(getApplicationContext(),"Server Error",Toast.LENGTH_LONG).show();
+
+                }
+                //Log.i("VOLLEY", response);
+            }
+        }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                //btnlogin.setEnabled(true);
+                progressDialog.dismiss();
+
+                Toast.makeText(getApplicationContext(), error.getMessage(), Toast.LENGTH_SHORT).show();
+                Toast.makeText(getApplicationContext(), "Server Error!", Toast.LENGTH_SHORT).show();
+
+                //Log.v("VOLLEY", error.toString());
+            }
+        }) {
+
+
+            @Override
+            public String getBodyContentType() {
+                return "application/json; charset=utf-8";
+            }
+
+            @Override
+            public byte[] getBody() throws AuthFailureError {
+                return finalSavedata == null ? null : finalSavedata.getBytes(StandardCharsets.UTF_8);
+            }
+
+        };
+
+        stringRequest.setRetryPolicy(new DefaultRetryPolicy(
+                0,
+                DefaultRetryPolicy.DEFAULT_MAX_RETRIES,
+                DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
+
+        requestQueue.add(stringRequest);
+
     }
-
-    
- */
-
 
     @Override
     public void onBackPressed() {
@@ -890,6 +1237,14 @@ public class ChatBoxActivity extends AppCompatActivity {
             clipboard.setPrimaryClip(clip);
         }
     }
+
+
+    public void GetTranslationAlertDialog(){
+
+
+
+    }
+
 
     public void GetUsernameAlertDialog(){
 
@@ -1038,7 +1393,7 @@ public class ChatBoxActivity extends AppCompatActivity {
                 @Override
                 public void run() {
                     //Log.e(TAG, "Error connecting");
-                    Toast.makeText(getApplicationContext(), "Failed to connect to Sever!", Toast.LENGTH_LONG).show();
+                   // Toast.makeText(getApplicationContext(), "Failed to connect to Sever!", Toast.LENGTH_LONG).show();
                 }
             });
         }
@@ -1283,20 +1638,54 @@ public class ChatBoxActivity extends AppCompatActivity {
 
  */
 
+    public class SpinnerAdapter extends BaseAdapter {
+        Context context;
+        String[] Strings;
+        private LayoutInflater mInflater;
 
+        public SpinnerAdapter(Context context, String[] strings) {
+            this.context = context;
+            this.Strings = strings;
+        }
 
+        @Override
+        public int getCount() {
+            return title.length;
+        }
 
+        @Override
+        public Object getItem(int position) {
+            return position;
+        }
 
-    public String getStringImage(Bitmap bmp){
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        bmp.compress(Bitmap.CompressFormat.JPEG, 70, baos);
-        byte[] imageBytes = baos.toByteArray();
-        String encodedImage = Base64.encodeToString(imageBytes, Base64.DEFAULT);
-        return encodedImage;
+        @Override
+        public long getItemId(int position) {
+            return position;
+        }
+
+        @Override
+        public View getView(int position, View convertView, ViewGroup parent) {
+            final ListContent holder;
+            View v = convertView;
+            if (v == null) {
+                mInflater = (LayoutInflater) context.getSystemService(context.LAYOUT_INFLATER_SERVICE);
+                v = mInflater.inflate(R.layout.chatboxcustomdialogtextview, null);
+                holder = new ListContent();
+                holder.text = (TextView) v.findViewById(R.id.textcustomdialogchatbox);
+                v.setTag(holder);
+            } else {
+                holder = (ListContent) v.getTag();
+            }
+
+            holder.text.setText(Strings[position]);
+
+            return v;
+        }
     }
 
-
-
+    static class ListContent {
+        TextView text;
+    }
 
 
 }
